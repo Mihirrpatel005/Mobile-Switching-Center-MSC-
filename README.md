@@ -1,16 +1,23 @@
 # Mobile-Switching-Center-MSC-
 
-Model the behavior of a Mobile Switching Center (MSC) as it allocates and deallocates channels to
+Model the behavior of a Mobile Switching Center (MSC) as it allocates and deallocates channels to connections using a fixed allocation scheme.
 
-connections using a fixed allocation scheme.
+This is a simulation. As a result, you need only write a single program which will run on a single machine. You will decide what algorithm the MSC uses to allocate channels. You should assume 3 cell reuse (cluster size N = 3) and a coverage area of 9 hexagonal cells (3 clusters) which are adjacent. The cells in cluster A are numbered 1,2,3, cluster B are 4,5,6, and cluster C are 7,8,9. See figure below.
 
+The cell radius is 1000 meters. Assume you have a total of 15 voice channels per cluster, so channels 1-5 are used in cells 1,6,9, channels 6-10 are used in cells 2,5,7, and channels 11-15 are used in cells 3,4,8.
 
-This is a simulation. As a result, you need only write a single program which will run on a single
+The MSC must use a fixed channel allocation scheme, however, you get to decide how channels within a cell are allocated! The order in which you assign channels in the various cells will have an effect on the signal quality though. The scheme that you use to determine this order is called a hunting sequence.
 
-machine. You will decide what algorithm the MSC uses to allocate channels.
+For instance, a very simplistic scheme would be to start with the first channel allocated to the cluster (e.g., channel 1 in cluster 1) each time and keep trying channels (2, 3, 4, ...) until you get one that works (is not in use in this cluster and has an acceptable SIR). Assume a blocked calls cleared model. Assume that the mobiles are not very mobile, rather that they stay in the same cell for the entire length of their call. No handoffs are necessary.
 
-You should assume 3 cell reuse (cluster size N = 3) and a coverage area of 9 hexagonal cells (3 clusters)
+Each time a channel is allocated, use equation 2.8 to calculate the SIR. This formula was given in class and a crude representation is given below. Use a path loss exponent (n) of 4.0. We require an estimated SIR of 22 dB to complete a call. If the SIR will be less, the call must be refused. We will only consider co-channel interference; you may ignore adjacent channel interference. Note that you must convert SIR to dB before comparing to the required value. Remember that SIR (in dB) = 10log(S/I).
 
-which are adjacent. The cells in cluster A are numbered 1,2,3, cluster B are 4,5,6, and cluster C are
+Eqn 2.8: S/I = (R^-n) / (sum over all interferers i ((D sub i) ^-n)) Note also that equation 2.8 takes into account the relative distance of the co-channel cells. To make this easy, assume the distance is in whole cell diameters. So an interfering cell is either 1, 2, or 3 diameters (2000, 4000, or 6000 meters) away. You should manually construct a table in advance to provide this
 
-7,8,9. See figure below.
+For example, if you were trying to assign channel 12 to a new call in cell 3, and that channel was already used in cell 4 (but not in cell 8), then there would be 1 co-channel interferer which was 2 cell diameters (4000 meters) away. The formula would work out to:S/I = (1000^-4)/(4000^-4) = 256 = 24 dB. So channel 12 could be successfully allocated to the call in cell 3.
+
+If you tried to assign channel 7 in cell 2 (cluster A) and that channel was already used in cell 4 (cluster B) and 7 (cluster C), then there would be 2 co-channel interferers which are 1 cell diameter (2000 meters) and 2 cell diameters (4000 meters) away respectively. The formula would give: S/I = (1000^-4)/[(2000^-4) + (4000^-4)] = 15 = 11.7 dB. So channel 7 could not be allocated - another channel would have to be tried.
+
+Note, if there are 2 co-channel interferers, one 4000 meters away and the other 6000, the denominator is (4000^-4 + 6000^-4), NOT (4000+6000)^-4 You must track 2 statistics as your program runs: the Grade of Service and the average SIR for successful calls. The Grade of Service (GOS) being provided by this system is simply the %blocked calls and can be calculated at completion of the simulation by dividing the number of blocked calls by the number of call attempts. The average SIR for successful calls can be calculated by adding all the SIR values for calls which succeed and dividing by the number of successful calls at the completion of the simulation.
+
+You may write your program in any language (C, C++, Java, SimScript II, etc.) and run it on any machine. You don’t need to demo your program (although clearly it must run correctly.) I suggest using an event-driven simulation. This means that you build an event queue (a simple linked list ordered by time.) Read all the call attempts in and place them in the queue. Then take an event off the head of the queue and process it. This means, decide if a channel can be allocated, using your channel allocation scheme. If not, discard this event. If so, place a corresponding disconnect event in the queue at the appropriate time =current time + call duration (note that it probably will not go at the end of the queue). Now repeat until the queue is empty. 
